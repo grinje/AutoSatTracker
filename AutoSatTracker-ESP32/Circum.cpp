@@ -12,7 +12,7 @@
 
 /* constructor
  */
-Circum::Circum(LiquidCrystal_I2C& lcd)
+Circum::Circum()
 {
 	// create serial connection to GPS board
 	resetWatchdog();
@@ -255,7 +255,7 @@ bool Circum::overrideValue (char *name, char *value)
 
 /* call occasionally to sync our system time from GPS, if it is running ok.
  */
-void Circum::checkGPS(LiquidCrystal_I2C& lcd)
+void Circum::checkGPS()
 {
 	resetWatchdog();
   char c;
@@ -266,8 +266,7 @@ void Circum::checkGPS(LiquidCrystal_I2C& lcd)
 
     //Serial.print((char)ss->peek());
    if (!gps_data) {
-      lcd.setCursor(14,3);
-      lcd.print("GPS-  ");
+      lcd->gps("GPS-  ");
       gps_data = true;
     }
  
@@ -293,7 +292,7 @@ void Circum::checkGPS(LiquidCrystal_I2C& lcd)
 		    Serial.println("No fix detected");
 	  	} else {
 		    gps_lock = true;
-        lcd.setCursor(17,3); lcd.print("+");
+        lcd->gpsLock();
 		    if (loc_fix_age > 5000 || time_fix_age > 5000)
 			    Serial.println("Warning: possible stale data!");
 		  }
@@ -327,11 +326,8 @@ void Circum::checkGPS(LiquidCrystal_I2C& lcd)
 		    // get fix quality info
 		    hdop = 0.01*GPS->hdop();
 		    nsats = (int)GPS->satellites();
-       
-        lcd.setCursor(18,3); 
-        if (nsats < 10) 
-            lcd.print(" ");
-        lcd.print(nsats);
+
+        lcd->gpsSats(nsats);
 		  }
 	  }
 	}

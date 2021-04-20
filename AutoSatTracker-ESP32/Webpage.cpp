@@ -13,13 +13,13 @@
 
 /* constructor
  */
-Webpage::Webpage(LiquidCrystal_I2C& lcd)
+Webpage::Webpage()
 {
 	// ask user how to connect to wifi if we can not attach
- lcd.setCursor(0,2); lcd.print("Connecting WiFi...");
+ lcd->status("Connecting WiFi...");
 
 	while (!connectWiFi())
-	    askWiFi(lcd);
+	    askWiFi();
 
 	// create server
 	resetWatchdog();
@@ -27,8 +27,7 @@ Webpage::Webpage(LiquidCrystal_I2C& lcd)
 	httpServer = new WiFiServer(80);				// http
 	httpServer->begin();
 	Serial.println (WiFi.localIP());
-  lcd.setCursor(0,2); lcd.print("IP                  ");
-  lcd.setCursor(3,2); lcd.print(WiFi.localIP());
+  lcd->printIP(WiFi.localIP().toString());
 
 	// init user message mechanism
 	user_message_F = F("Andreas G");					// page welcome message

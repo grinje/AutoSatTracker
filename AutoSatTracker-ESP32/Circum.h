@@ -4,7 +4,6 @@
 #include <WiFiClient.h>
 //#include <SoftwareSerial.h>
 #include <TinyGPS.h>
-#include <LiquidCrystal_I2C.h>
 
 #include "AutoSatTracker-ESP.h"
 #include "P13.h"
@@ -48,10 +47,10 @@ class Circum {
 	float hdop;			// horizontal degradation
 	int nsats;			// number of satellites used
 
-	Circum(LiquidCrystal_I2C& lcd);
+	Circum();
 	void sendNewValues (WiFiClient client);
 	bool overrideValue (char *name, char *value);
-	void checkGPS(LiquidCrystal_I2C& lcd);
+	void checkGPS();
 	DateTime now() {return dt_now;};
 	float age (Satellite *sat);
 	Observer *observer();

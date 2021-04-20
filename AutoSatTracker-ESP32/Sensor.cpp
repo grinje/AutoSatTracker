@@ -3,18 +3,20 @@
 
 #include "Sensor.h"
 
-uint8_t lcd_counter = 100;
 
 /* class constructor
  */
-Sensor::Sensor(LiquidCrystal_I2C& lcd)
+Sensor::Sensor()
 {
 	// instantiate, discover and initialize
 	resetWatchdog();
 
   // Initiate BNO compass
   bnocp = new Adafruit_BNO055(-1, BNO055_I2CCOMPASS);
-  bnocompass = bnocp->begin(Adafruit_BNO055::OPERATION_MODE_COMPASS);
+  
+  //bnocompass = bnocp->begin(Adafruit_BNO055::OPERATION_MODE_COMPASS);
+  bnocompass = bnocp->begin(Adafruit_BNO055::OPERATION_MODE_NDOF);
+  
   if (bnocompass) 
     Serial.println("Found BNO055 Compass.");
 
@@ -26,7 +28,7 @@ Sensor::Sensor(LiquidCrystal_I2C& lcd)
 	    Serial.println (F("Found 9DOF sensor."));
 	else {
 	    Serial.println (F("9DOF Sensor not found"));
-      lcd.setCursor(0,3); lcd.print("NO 9DOF!");
+      lcd->gyro("NO 9DOF!");
       return;
 	}
 	installCalibration();
@@ -111,15 +113,20 @@ float Sensor::getCompass()
   imu::Vector<3> vector;
   float heading;
 
-  vector = bnocp->getVector(Adafruit_BNO055::VECTOR_MAGNETOMETER);
-  heading = atan2(vector.y(), vector.x());
+  if (true) {
+      vector = bnocp->getVector(Adafruit_BNO055::VECTOR_EULER);
+      heading = myfmod (vector.x() + circum->magdeclination +360, 360);
+  } else {
+    vector = bnocp->getVector(Adafruit_BNO055::VECTOR_MAGNETOMETER);
+    heading = atan2(vector.y(), vector.x());
 
-  // Correct for when signs are reversed.
-  if(heading < 0)
-    heading += 2*PI;
+    // Correct for when signs are reversed.
+    if(heading < 0)
+      heading += 2*PI;
  
-  // Convert radians to degrees
-  heading = heading * 180/M_PI;
+    // Convert radians to degrees
+    heading = heading * 180/M_PI;
+  }
 
   return heading;
 }
@@ -204,6 +211,7 @@ void Sensor::getAzEl (float *azp, float *elp)
   // Serial.println(*elp);
 */
   *elp = getElevation();
+  lcd->printEl(*elp);
   //    Serial.print(" Euler y2: ");Serial.println(*elp);
 
   // Find compass heading
@@ -219,6 +227,7 @@ void Sensor::getAzEl (float *azp, float *elp)
       break;     
   }  
   prevX = *azp; 
+  lcd->printAz(*azp);
   //  Serial.print(" Euler y3: ");Serial.println(*elp);
 
   // Serial.print("  H: "); Serial.println(*azp, 4);
@@ -294,7 +303,7 @@ bool Sensor::overrideValue (char *name, char *value)
 }
 
 /* Print sensor reading on lcd */
-void Sensor::printLCD (LiquidCrystal_I2C& lcd)
+void Sensor::printLCD ()
 {
   if (!sensor_found) {
     return;
@@ -306,31 +315,19 @@ void Sensor::printLCD (LiquidCrystal_I2C& lcd)
   
   float az, el;
   getAzEl (&az, &el);
-  lcd.setCursor(0,3);
-  if (az < 100)
-    lcd.print(" ");
-  if (az < 10)
-    lcd.print(" ");   
-  lcd.print(az); 
-  
-  lcd.setCursor(7,3); 
-  if (el > 0) lcd.print(" ");
-  if (el >= 0 && el < 10) lcd.print(" ");
-  if (el < 0 && el > -10) lcd.print(" ");
- 
-  lcd.print(el);  
-  lcd.setCursor(13,3); lcd.print(" ");
+  //lcd->printAz(az);
+  //lcd->printEl(el);
 
   // Check calibration
   uint8_t sys, gyro, accel, mag;
   bool calok = calibrated (sys, gyro, accel, mag);
-  lcd.setCursor(6,3);
+
   if (calok) {
-    lcd.print(" ");
+    lcd->gyroLock(true);
     if (!initialized) 
       saveCalibration();
   } else {
-    lcd.print("!");
+    lcd->gyroLock(false);
     if (trycal) {
       trycal = false;
       stepper->goFullTurn();
@@ -414,7 +411,7 @@ void Sensor::saveCalibration()
   if (bnocompass) {
     bnocp->getSensorOffsets(nv->calibrationData);
   	// restore NDOF mode
-  	bnocp->setMode (Adafruit_BNO055::OPERATION_MODE_COMPASS);
+  	bnocp->setMode (Adafruit_BNO055::OPERATION_MODE_NDOF);
   	delay(25);
 
     // Crystal must be configured AFTER loading calibration data into BNO055. 
@@ -461,7 +458,7 @@ void Sensor::installCalibration()
     bnocp->setSensorOffsets(nv->calibrationData);
 
   	// restore NDOF mode
-  	bnocp->setMode (Adafruit_BNO055::OPERATION_MODE_COMPASS);
+  	bnocp->setMode (Adafruit_BNO055::OPERATION_MODE_NDOF);
   } else {
     // put into config mode
     bno->setMode (Adafruit_BNO055::OPERATION_MODE_CONFIG);

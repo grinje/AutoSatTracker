@@ -1,27 +1,6 @@
 // class to control two motors to track a target az and el using the A4988 stepper contoller
 #include "Stepper.h"
 
-/* issue raw motor command in microseconds pulse width, clamped at limit
- */
-void StepController::setMotorPosition (uint8_t motn, uint16_t newpos)
-{
-  if (motn >= NMOTORS)
-      return;
-  MotorInfo *mip = &motor[motn];
-
-  mip->atmin = (newpos <= mip->min);
-  if (mip->atmin)
-      newpos = mip->min;
-  mip->atmax = (newpos >= mip->max);
-  if (mip->atmax)
-      newpos = mip->max;
-
-  mip->del_pos = (int)newpos - (int)mip->pos;
-  mip->pos = newpos;
-  //pwm->setPWM(mip->step_num, 0, mip->pos/US_PER_BIT);
-  // Serial.print(mip->step_num); Serial.print(" "); Serial.println (newpos);
-}
-
 void StepController::speed_Full(uint8_t motn) { digitalWrite(motor[motn].MS1Pin, LOW); digitalWrite(motor[motn].MS2Pin, LOW); digitalWrite(motor[motn].MS3Pin, LOW); }
 void StepController::speed_Half(uint8_t motn) { digitalWrite(motor[motn].MS1Pin, HIGH); digitalWrite(motor[motn].MS2Pin, LOW); digitalWrite(motor[motn].MS3Pin, LOW); }
 void StepController::speed_Quarter(uint8_t motn) { digitalWrite(motor[motn].MS1Pin, LOW); digitalWrite(motor[motn].MS2Pin, HIGH); digitalWrite(motor[motn].MS3Pin, LOW); }
@@ -150,6 +129,7 @@ void StepController::runStepMotor(uint8_t motn, int steps)
    */
   bool direction = (steps >= 0 ? LOW : HIGH);
   Serial.print("Motor: "); Serial.print(motn); Serial.print("\tSteps: ");Serial.print(steps);Serial.print(" Direction: "); Serial.println(direction);
+  steps = abs(steps);
 
   // If at end position, just stop turning
 /*  if (direction && motor[motn].atmin) {
@@ -169,16 +149,18 @@ void StepController::runStepMotor(uint8_t motn, int steps)
   // set motor direction
   digitalWrite(motor[motn].dirPin, direction);
     
-
   // set speed
-  speed_Half(motn);
+  if (steps > 15) 
+    speed_Half(motn);
+  else
+    speed_Quarter(motn);
 
   // enable motor
   digitalWrite(enableMotor, HIGH);
   delayMicroseconds(stepDelay);
 
   // Turn the number of steps
-  steps = abs(steps);
+
   while (steps--) {
     resetWatchdog();
     digitalWrite(motor[motn].stepPin, HIGH);
@@ -299,7 +281,7 @@ StepController::StepController ()
 
 /* move motors towards the given new target az and el 
  */
-void StepController::moveToAzEl (LiquidCrystal_I2C& lcd, float az_t, float el_t)
+void StepController::moveToAzEl (float az_t, float el_t)
 {
   // only update every UPD_PERIOD
   uint32_t now = millis();
@@ -321,11 +303,15 @@ void StepController::moveToAzEl (LiquidCrystal_I2C& lcd, float az_t, float el_t)
 
       // calibrate if not already else seek target
       if (!calibrated()) {
-        lcd.setCursor(0,1); lcd.print("Calibrating motors  ");
-        calibrate (lcd, az_s, el_s);
+        lcd->action("Calibrating motors  ");
+        calibrate (az_s, el_s);
 
       }  else {
-        lcd.setCursor(0,1); lcd.print("Tracking target!     ");
+        // Update tracking status on display
+        if ((abs(az_t - az_s) < 1) && (abs(el_t - el_s) < 1))      
+          lcd->printTracking("*");
+        else
+          lcd->printTracking("+");
         if (el_t < 0)
           el_t = 0;
           seekTarget (az_t, el_t, az_s, el_s);
@@ -347,7 +333,7 @@ void StepController::moveToAzEl (LiquidCrystal_I2C& lcd, float az_t, float el_t)
 /* run the next step of the initial scale calibration series.
  * steps proceed using init_step up to N_INIT_STEPS
  */
-void StepController::calibrate (LiquidCrystal_I2C& lcd, float& az_s, float& el_s)
+void StepController::calibrate (float& az_s, float& el_s)
 {
   // handy step ranges
   uint16_t range0 = motor[0].max - motor[0].min;
@@ -356,7 +342,6 @@ void StepController::calibrate (LiquidCrystal_I2C& lcd, float& az_s, float& el_s
   switch (init_step++) {
 
   case 0:
-      lcd.setCursor(19,1); lcd.print("0");
       Serial.println("Calibrate 0");
       // move near min of each range
       gotoMin(0);
@@ -372,8 +357,6 @@ void StepController::calibrate (LiquidCrystal_I2C& lcd, float& az_s, float& el_s
       prevstop_el = el_s;
       Serial.print("Case 1: Setting prev AZ: "); Serial.println(az_s);
 
-      
-      lcd.setCursor(19,1); lcd.print("1");
       Serial.println("Calibrate 1");
       // move just motor 0 a subtantial distance
       /*
@@ -382,15 +365,14 @@ void StepController::calibrate (LiquidCrystal_I2C& lcd, float& az_s, float& el_s
     Serial.print (el_s); Serial.print(F("\tMoves\t"));
     Serial.println(CAL_FRAC*range0, 0);
       */
-      runStepMotor(0, (calibrateSteps * 1));
+    //  runStepMotor(0, (calibrateSteps * 1));
 
       break;
 
   case 2:
-      lcd.setCursor(19,1); lcd.print("2");
       Serial.println("Calibrate 2");
       // calculate scale of motor 0
-      motor[0].az_scale = fabs(calibrateSteps/azDist(prevstop_az, az_s));
+     /* motor[0].az_scale = fabs(calibrateSteps/azDist(prevstop_az, az_s));
       motor[0].el_scale = fabs(calibrateSteps/(el_s - prevstop_el));
      Serial.print(F("Calibrate 0 AZ scale ")); Serial.print(az_s); Serial.print(F("\tPrevstop: "));Serial.print(prevstop_az);Serial.print(F("\t Dist: ")); Serial.print(az_s - prevstop_az); Serial.print("\t Scale: ");Serial.println(motor[0].az_scale);
      Serial.print(F("Calibrate 0 EL scale ")); Serial.print(el_s); Serial.print(F("\tPrevstop: "));Serial.print(prevstop_el);Serial.print(F("\t Dist: ")); Serial.print(el_s - prevstop_el); Serial.print("\t Scale: ");Serial.println(motor[0].el_scale);
@@ -411,16 +393,15 @@ void StepController::calibrate (LiquidCrystal_I2C& lcd, float& az_s, float& el_s
     Serial.println(CAL_FRAC*range1, 0);
       */
       
-      runStepMotor(1, (calibrateSteps * 1));
+   //   runStepMotor(1, (calibrateSteps * 1));
       break;
 
   case 3:
-      lcd.setCursor(19,1); lcd.print("3");
         Serial.println("Calibrate 3");
       // calculate scale of motor 1
       //motor[1].az_scale = CAL_FRAC*range1/azDist(prevstop_az, az_s);
       //motor[1].el_scale = CAL_FRAC*range1/(el_s - prevstop_el);
-      motor[1].az_scale = fabs(calibrateSteps/azDist(prevstop_az, az_s));
+    /*  motor[1].az_scale = fabs(calibrateSteps/azDist(prevstop_az, az_s));
       motor[1].el_scale = fabs(calibrateSteps/(el_s - prevstop_el));
       Serial.print(F("Calibrate 1 AZ scale ")); Serial.print(az_s); Serial.print(F("\tPrevstop: "));Serial.print(prevstop_az);Serial.print(F("\t Dist: ")); Serial.print(az_s - prevstop_az); Serial.print("\t Scale: ");Serial.println(motor[1].az_scale);
       Serial.print(F("Calibrate 1 EL scale ")); Serial.print(el_s); Serial.print(F("\tPrevstop: "));Serial.print(prevstop_el);Serial.print(F("\t Dist: ")); Serial.print(el_s - prevstop_el); Serial.print("\t Scale: ");Serial.println(motor[1].el_scale);
@@ -436,7 +417,7 @@ void StepController::calibrate (LiquidCrystal_I2C& lcd, float& az_s, float& el_s
       */
 
       // select best motor for az
-      best_azmotor = fabs(motor[0].az_scale) < fabs(motor[1].az_scale) ? 0 : 1;
+     // best_azmotor = fabs(motor[0].az_scale) < fabs(motor[1].az_scale) ? 0 : 1;
       
       // Override the whole calibration
       best_azmotor = 1;
@@ -457,7 +438,6 @@ void StepController::calibrate (LiquidCrystal_I2C& lcd, float& az_s, float& el_s
       break;
 
   default:
-      lcd.setCursor(19,1); lcd.print("!");
       webpage->setUserMessage (F("BUG! Bogus init_step"));
       break;
   }

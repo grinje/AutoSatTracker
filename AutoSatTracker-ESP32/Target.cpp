@@ -26,7 +26,7 @@ Target::Target()
 
 /* update target if valid, and move gimbal if tracking
  */
-void Target::track(LiquidCrystal_I2C& lcd)
+void Target::track()
 {
 	resetWatchdog();
 
@@ -35,7 +35,7 @@ void Target::track(LiquidCrystal_I2C& lcd)
 
 	// update gimbal if tracking
 	if (tracking)
-	    stepper->moveToAzEl (lcd, az, el);
+	    stepper->moveToAzEl (az, el);
   delay(1);
 }
 
@@ -78,6 +78,7 @@ void Target::setTrackingState (bool want_on)
 	} else {
 	    webpage->setUserMessage (F("Tracking is off"));
 	    tracking = false;
+      lcd->printTracking(" ");
 	}
 }
 
@@ -130,6 +131,7 @@ void Target::sendNewValues (WiFiClient client)
 	    client.print (F("T_NextRise="));
 	    if (rise_ok) {
 		float dt = 24*now.diff(rise_time);
+    lcd->nextRise(dt);
 		circum->printSexa (client, dt);
 		circum->printPL (client, (dt < 1.0/60.0) ? Circum::GOODNEWS : Circum::NORMAL);
 	    } else
@@ -174,8 +176,10 @@ void Target::sendNewValues (WiFiClient client)
 	    client.println (transaz);
 
 	    client.print (F("T_TransEl="));
-	    if (trans_ok)
+	    if (trans_ok) {
 		client.println (trans_el);
+        lcd->printElevation(trans_el);
+	    }
 	    else
 		client.println (F("??? !"));
 	    client.print ("T_TransEl_l=");
@@ -186,6 +190,7 @@ void Target::sendNewValues (WiFiClient client)
 	    if (set_ok) {
 		float dt = 24*now.diff(set_time);
 		circum->printSexa (client, dt);
+       lcd->nextSet(dt);
 		circum->printPL (client, Circum::NORMAL);
 	    } else
 		client.println (F("??? !"));
@@ -202,6 +207,7 @@ void Target::sendNewValues (WiFiClient client)
 		float up = rise_time.diff(set_time);
 		if (up > 0) {
 		    circum->printSexa (client, up*24);			// next whole pass
+        lcd->printDuration(up*24);
 		    circum->printPL (client, Circum::NORMAL);
 		    tup= F("Next pass duration");
 		} else {
@@ -319,6 +325,7 @@ void Target::setTLE (char *l1, char *l2, char *l3)
 	    findNextPass();		// init for track()
 	    computeSkyPath();
 	    webpage->setUserMessage (F("New TLE uploaded successfully for "), TLE_L0, '+');
+      lcd->printTarget(TLE_L0);
 	} else {
 	    webpage->setUserMessage (F("Uploaded TLE is invalid!"));
 	    tle_ok = false;

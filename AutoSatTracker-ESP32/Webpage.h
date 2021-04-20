@@ -7,13 +7,13 @@
 #include <WiFi.h>
 #include <WiFiServer.h>
 #include <WiFiClient.h>
-#include <LiquidCrystal_I2C.h>
 
 #include "AutoSatTracker-ESP.h"
 #include "Sensor.h"
 #include "Circum.h"
 #include "Target.h"
 #include "NV.h"
+#include "LCDPanel.h"
 
 // persistent state info to fetch a TLE from a remote web site incrementally
 typedef struct {
@@ -30,7 +30,7 @@ class Webpage
 
     public:
 
-	Webpage(LiquidCrystal_I2C& lcd);
+	Webpage();
 	void checkEthernet();
 	void setUserMessage (const __FlashStringHelper *ifsh);
 	void setUserMessage (const __FlashStringHelper *ifsh, const char *msg, char state);
@@ -47,7 +47,7 @@ class Webpage
 	TLEFetch tlef;
 
 	bool connectWiFi();
-	void askWiFi(LiquidCrystal_I2C& lcd);
+	void askWiFi();
 	void sendAskPage (WiFiClient client);
 	void scrub (char *s);
 	char readNextClientChar (WiFiClient client, uint32_t *to);

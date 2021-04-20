@@ -12,9 +12,6 @@
 // In case you have this as a compass
 #include <Adafruit_LSM303DLH_Mag.h>
 
-#include <LiquidCrystal_I2C.h>
-
-
 #include "AutoSatTracker-ESP.h"
 #include "Circum.h"
 
@@ -40,12 +37,16 @@ class Sensor {
   float prevX = 0.0;
   float prevY = 0.0;
 
+      // Only update the display every $lcd_counter times
+    uint8_t lcd_counter = 100;
+
+
     public:
 
-	Sensor(LiquidCrystal_I2C& lcd);
+	Sensor();
 	int8_t getTempC();
 	void getAzEl (float *azp, float *elp);
-  void printLCD (LiquidCrystal_I2C& lcd);
+  void printLCD ();
 	void sendNewValues (WiFiClient client);
 	bool connected() { return sensor_found; };
 	void saveCalibration(void);

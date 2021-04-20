@@ -56,7 +56,7 @@ class Target {
     public:
 
 	Target();
-	void track(LiquidCrystal_I2C& lcd);
+	void track();
 	bool tleValidChecksum (const char *line);
 	void setTrackingState (bool on);
         void sendNewValues (WiFiClient client);

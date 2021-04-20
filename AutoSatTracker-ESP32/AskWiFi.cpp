@@ -10,7 +10,7 @@
 
 /* set up an Access Point to ask operator for local wifi info, save in NV
  */
-void Webpage::askWiFi(LiquidCrystal_I2C& lcd)
+void Webpage::askWiFi()
 {
 	// AP info
 	IPAddress ip(192,168,10,10);
@@ -33,9 +33,9 @@ void Webpage::askWiFi(LiquidCrystal_I2C& lcd)
 	}
 	delay(500);
 	Serial.print (F("AP IP: ")); Serial.println (WiFi.softAPIP());
-  lcd.setCursor(0,2); lcd.print("CFG-IP ");
-  lcd.setCursor(7,2); lcd.print(WiFi.softAPIP());
-  lcd.setCursor(0,3); lcd.print("Please setup WiFi!  ");
+  lcd->status("CFG-IP ");
+  lcd->print(WiFi.softAPIP().toString());
+  lcd->gyro("Please setup WiFi!  ");
 
 	// start HTTP server 
 	resetWatchdog();

@@ -77,8 +77,7 @@ class StepController {
       float prevsensor_az;
       float min_az, min_el;     // endstop positions
 
-      void setMotorPosition (uint8_t motn, uint16_t newpos);
-      void calibrate (LiquidCrystal_I2C& lcd, float &az_s, float &el_s);
+      void calibrate (float &az_s, float &el_s);
       void seekTarget (float& az_t, float& el_t, float& az_s, float& el_s);
       float azDist (float &from, float &to);
       float moveDist (float &from, float &to);
@@ -99,7 +98,7 @@ class StepController {
 
       StepController();
       void goFullTurn();
-      void moveToAzEl (LiquidCrystal_I2C& lcd, float az_t, float el_t);
+      void moveToAzEl (float az_t, float el_t);
       void sendNewValues (WiFiClient client);
       bool connected() { return stepper_found; };
       bool calibrated() { return (init_step >= N_INIT_STEPS); }
