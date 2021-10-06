@@ -128,6 +128,7 @@ void Webpage::askWiFi()
 		if (eos) {
 		    *eos = '\0';
 		    strncpy (nv->pw, wifi_pw, sizeof(nv->pw));
+        //strncpy(nv->pw, "test", sizeof("test"));
         
 		    //nv->put();
 		    Serial.println(nv->pw);
