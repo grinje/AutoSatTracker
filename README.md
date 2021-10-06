@@ -3,3 +3,4 @@ Tracking satellites with custom hardware based on stepper motors. A blog descrip
 
 The construction of the rotator is based on the SatNOGS project found here: https://gitlab.com/librespacefoundation/satnogs/satnogs-rotator/tree/master
 
+The controller is based on the work by Elwood Downey found here: http://clearskyinstitute.com/ham/AST/. 
